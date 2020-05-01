@@ -1,8 +1,8 @@
 # Handwritten Japanese OCR  with Touch panel demo
-This is a handwritten Japanese OCR demo program based on a sample program from OpenVINO 2020.2 (handwritten-japanese-recognition.py)  
+This is a handwritten Japanese OCR demo program based on a sample program from Intel(r) Distribution of OpenVINO(tm) Toolkit 2020.2 (handwritten-japanese-recognition.py)  
 The demo program has simple UI and you can write Japanese on the screen with touch panel by your finger tip and try Japanese OCR performance.
 The demo uses pre-trained text-detection from Intel Open Model Zoo (OMZ) to detect text region from the canvas and run OCR for those texts.  
-手書き日本語OCRデモです。OpenVINO 2020.2に付属の`handwritten-japanese-recognition.py`デモを大幅に書き換えています。  
+手書き日本語OCRデモです。Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2に付属の`handwritten-japanese-recognition.py`デモを大幅に書き換えています。  
 簡単なUIを用意していますのでタッチパネル付きPCがあれば指で字を書いて認識させるデモを行うことが可能です。  
 IntelのOpen Model Zooの文字検出モデルも使用し、自動領域識別も行っています。  
 
@@ -68,6 +68,9 @@ Please make sure following files are placed at proper location.
 ## Demo Output
 The application uses the terminal to show resulting recognition text and inference performance.
 
+## Tested environment
+- Windows 10 x64 1909
+- Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2
 
 ## See Also
 * [Using Open Model Zoo demos](../../README.md)
