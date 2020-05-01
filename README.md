@@ -1,4 +1,4 @@
-# Handwritten Japanese Deep Learning based OCR  with touch panel demo
+# Handwritten Japanese Deep Learning Based OCR with Touch Panel Demo
 This is a handwritten Japanese OCR demo program based on a sample program from [**Intel(r) Distribution of OpenVINO(tm) Toolkit 2020.2**](https://software.intel.com/en-us/openvino-toolkit) (`handwritten-japanese-recognition.py`)  
 The demo program has simple UI and you can write Japanese on the screen with the touch panel by your finger tip and try Japanese OCR performance.  
 The demo uses a pre-trained text-detection DL model from Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo) to detect the text regions from the canvas and run a DL based OCR model for those text regions.  
@@ -8,21 +8,20 @@ Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo)の文字検�
 
 ![OCR demo](./resources/ocr-demo.gif)  
 
-### Required DL models to run this demo
+### Required DL Models to Run This Demo
 
-The demo expects the following model in the Intermediate Representation (IR) format:
+The demo expects the following models in the Intermediate Representation (IR) format:
 
    * handwritten-japanese-recognition-0001
    * text-detection-0003
 
 You can download those models from OpenVINO [Open Model Zoo](https://github.com/opencv/open_model_zoo).
-In the `models.lst` are the list of appropriate models for this demo
-that can be obtained via `Model downloader`.
+In the `models.lst` is the list of appropriate models for this demo that can be obtained via `Model downloader`.
 Please see more information about `Model downloader` [here](../../../tools/downloader/README.md).
 
-## How to run
+## How to Run
 
-(Assuming you have successfully installed and setup OpenVINO 2020.2. If you haven't done it yet, go to OpenVINO web page and follow the [*Get Started*](https://software.intel.com/en-us/openvino-toolkit/documentation/get-started) guide to do it)  
+(Assuming you have successfully installed and setup OpenVINO 2020.2. If you haven't, go to the OpenVINO web page and follow the [*Get Started*](https://software.intel.com/en-us/openvino-toolkit/documentation/get-started) guide to do it.)  
 
 ### 1. Install dependencies  
 The demo depends on:
@@ -68,9 +67,9 @@ Please make sure the following files are placed at the proper location.
 ```
 
 ## Demo Output
-The application uses the terminal to show resulting recognition text string.
+The application uses the terminal to show resulting recognition text strings.
 
-## Tested environment
+## Tested Environment
 - Windows 10 x64 1909
 - Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2
 - Python 3.6.5 x64
