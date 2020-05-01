@@ -8,7 +8,7 @@ Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo)の文字検�
 
 ![OCR demo](./resources/ocr-demo.gif)  
 
-## Required DL models to run this demo
+### Required DL models to run this demo
 
 The demo expects the following model in the Intermediate Representation (IR) format:
 
@@ -20,9 +20,9 @@ In the `models.lst` are the list of appropriate models for this demo
 that can be obtained via `Model downloader`.
 Please see more information about `Model downloader` [here](../../../tools/downloader/README.md).
 
-### How to run
+## How to run
 
-#### 1. Install dependencies  
+### 1. Install dependencies  
 The demo depends on:
 - opencv-python
 - numpy
@@ -34,14 +34,14 @@ To install all the required Python modules you can use:
 (Win10) pip install -r requirements.txt
 ```
 
-#### 2. Download DL models from OMZ
+### 2. Download DL models from OMZ
 Use `Model Downloader` to download required models.
 ``` sh
 (Linux) python3 $INTEL_OPENVINO_DIR/deployment_tools/tools/model_downloader/downloader.py --list models.lst
 (Win10) python "%INTEL_OPENVINO_DIR%\deployment_tools\tools\model_downloader\downloader.py" --list models.lst
 ```
 
-#### 3. Run the demo app
+### 3. Run the demo app
 This program doesn't accept any command line arguments. All file names and paths are hard coded in the source code.
 ``` sh
 (Linux) python3 handwritten-japanese-OCR-touch-panel-demo.py
@@ -71,6 +71,7 @@ The application uses the terminal to show resulting recognition text and inferen
 ## Tested environment
 - Windows 10 x64 1909
 - Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2
+- Python 3.6.5 x64
 
 ## See Also
 * [Using Open Model Zoo demos](../../README.md)
