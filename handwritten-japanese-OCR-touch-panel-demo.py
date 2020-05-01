@@ -30,14 +30,19 @@ from functools import reduce
 from openvino.inference_engine import IENetwork, IECore
 from utils.codec import CTCCodec
 
+# Canvas size is the same as the input size of the text detection model (to ommit resizing before text area inference)
+_canvas_x = 1280
+_canvas_y = 768
+
+
+# -----------------------------------------------------------------
 
 def get_characters(char_file):
-    '''Get characters'''
     with open(char_file, 'r', encoding='utf-8') as f:
         return ''.join(line.strip('\n') for line in f)
 
-def preprocess_input(src, height, width):
 
+def preprocess_input(src, height, width):
     src = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
     ratio = float(src.shape[1]) / float(src.shape[0])
     tw = int(height * ratio)
@@ -46,11 +51,12 @@ def preprocess_input(src, height, width):
     outimg = np.full((height, width), 255., np.float32)
     rsz_h, rsz_w = rsz.shape
     outimg[:rsz_h, :rsz_w] = rsz
-    cv2.imshow('input image', outimg)
-    cv2.waitKey(2*1000)
+    cv2.imshow('OCR input image', outimg)
 
     outimg = np.reshape(outimg, (1, height, width))
     return outimg
+
+# -----------------------------------------------------------------
 
 def softmax_channel(data):
     for i in range(0, len(data), 2):
@@ -62,6 +68,7 @@ def softmax_channel(data):
         data[i+1]/=s
     return data
 
+
 def findRoot(point, group_mask):
     root = point
     update_parent = False
@@ -72,13 +79,14 @@ def findRoot(point, group_mask):
         group_mask[point] = root
     return root
 
+
 def join(p1, p2, group_mask):
     root1 = findRoot(p1, group_mask)
     root2 = findRoot(p2, group_mask)
     if root1 != root2:
         group_mask[root1] = root2
 
-# w=320, h=192
+
 def get_all(points, w, h, group_mask):
     root_map = {}
     mask = np.zeros((h, w), np.int32)
@@ -89,8 +97,10 @@ def get_all(points, w, h, group_mask):
         mask[py, px] = root_map[point_root]
     return mask
 
+
 def decodeImageByJoin(segm_data, segm_data_shape, link_data, link_data_shape, segm_conf_thresh, link_conf_thresh):
-    h, w = segm_data_shape[1:2+1]   # 192, 320
+    h = segm_data_shape[1]
+    w = segm_data_shape[2]
     pixel_mask = np.full((h*w,), False, dtype=np.bool)
     group_mask = {}
     points     = []
@@ -118,10 +128,12 @@ def decodeImageByJoin(segm_data, segm_data_shape, link_data, link_data_shape, se
                 if pixel_value and link_value:
                     join(px+py*w, nx+ny*w, group_mask)
                 neighbor+=1
-    
     return get_all(points, w, h, group_mask)
 
+
 def maskToBoxes(mask, min_area, min_height, image_size):
+    _X=0
+    _Y=1
     bboxes = []
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(mask)
     max_bbox_idx = int(max_val)
@@ -129,28 +141,29 @@ def maskToBoxes(mask, min_area, min_height, image_size):
 
     for i in range(1, max_bbox_idx+1):
         bbox_mask = np.where(resized_mask==i, 255, 0).astype(np.uint8)
-        contours, hierachy = cv2.findContours(bbox_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(bbox_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         if len(contours)==0:
             continue
         center, size, angle = cv2.minAreaRect(contours[0])
-        if min(size[0], size[1]) < min_height:
+        if min(size[_X], size[_Y]) < min_height:
             continue
-        if size[0]*size[1] < min_area:
+        if size[_X]*size[_Y] < min_area:
             continue
         bboxes.append((center, size, angle))
     return bboxes
 
 
 def text_detection_postprocess(link, segm, image_size, segm_conf_thresh, link_conf_thresh):
-    #  model/link_logits_/add   (1, 16, 192, 320)
-    #  model/segm_logits/add,   (1,  2, 192, 320)
-
+    _N = 0
+    _C = 1
+    _H = 2
+    _W = 3
     kMinArea   = 300
     kMinHeight = 10
 
     link_shape = link.shape
     link_data_size = reduce(lambda a, b: a*b, link_shape)
-    link_data = link.transpose((0,2,3,1))   # 1,192,320,16
+    link_data = link.transpose((_N, _H, _W, _C))
     link_data = link_data.flatten()
     link_data = softmax_channel(link_data)
     link_data = link_data.reshape((-1,2))[:,1]
@@ -158,7 +171,7 @@ def text_detection_postprocess(link, segm, image_size, segm_conf_thresh, link_co
 
     segm_shape = segm.shape
     segm_data_size = reduce(lambda a, b: a*b, segm_shape)
-    segm_data = segm.transpose((0,2,3,1))   # 1,192,320,2
+    segm_data = segm.transpose((_N, _H, _W, _C))
     segm_data = segm_data.flatten()
     segm_data = softmax_channel(segm_data)
     segm_data = segm_data.reshape((-1,2))[:,1]
@@ -219,51 +232,14 @@ def cropRotatedImage(image, points, top_left_point_idx):
 
 # ----------------------------------------------------------------------------
 
+g_mouseX=-1
+g_mouseY=-1
+g_mouseBtn = -1  # 0=left, 1=right, -1=none
 
-mouseX=-1
-mouseY=-1
+g_recogFlag = False
 
-recogFlag = False
-
-# Mouse event handler
-def onMouse(event, x, y, flags, param):
-    global mouseX, mouseY
-    global canvas
-    global recogFlag
-    
-    thinkness = 12
-
-    if event == cv2.EVENT_LBUTTONDOWN:
-        p0=np.array([0   ,0])
-        p1=np.array([1280,0])
-        pp=np.array([   x,y])
-        if np.linalg.norm(pp-p0, ord=2)<100:        # Recognition
-            recogFlag = True
-        elif np.linalg.norm(pp-p1, ord=2)<100:      # Clear
-            canvas = np.full((768,1280,3), [255,255,255], np.uint8)
-        else:
-            mouseX = x
-            mouseY = y
-    if event == cv2.EVENT_LBUTTONUP:
-        if mouseX!=-1 and mouseY!=-1:
-            cv2.line(canvas, (mouseX, mouseY), (x, y), (0,0,0), thinkness)
-        mouseX = -1
-        mouseY = -1
-    if event == cv2.EVENT_RBUTTONDOWN:
-        canvas = np.full((768,1280,3), [255,255,255], np.uint8)
-    if event == cv2.EVENT_MOUSEMOVE:
-        if mouseX!=-1 and mouseY!=-1:
-            cv2.line(canvas, (mouseX, mouseY), (x, y), (0,0,0), thinkness)
-            mouseX = x
-            mouseY = y
-    cv2.imshow('canvas', canvas)
-    cv2.waitKey(1)
-
-def onTrackbar(x):
-    global threshold
-    threshold = x
-    print(x)
-
+g_threshold = 50
+g_canvas = []
 
 def drawUI(image):
     cv2.circle(image, (0               , 0), 100, (   0, 255, 255), -1)
@@ -271,21 +247,78 @@ def drawUI(image):
     cv2.putText(image, 'RECOGNIZE', (10                ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 1)
     cv2.putText(image, 'CLEAR'    , (image.shape[1]-60 ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 1)
 
-canvas = np.full((768,1280,3), [255,255,255], np.uint8)
-threshold = 0.7
+
+def clearCanvas():
+    global g_canvas
+    g_canvas = np.full((_canvas_y, _canvas_x, 3), [255,255,255], np.uint8)
+
+
+def dispCanvas():
+    global g_canvas
+    canvas = g_canvas.copy()
+    drawUI(canvas)
+    cv2.imshow('canvas', canvas)
+    cv2.waitKey(1)
+
+
+# Mouse event handler
+def onMouse(event, x, y, flags, param):
+    global g_mouseX, g_mouseY
+    global g_mouseBtn
+    global g_canvas
+    global g_recogFlag
+    
+    black_thinkness = 12    # black pen size (mouse left button)
+    white_thinkness = 36    # white pan size (mouse right button)
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        p0=np.array([        0, 0])
+        p1=np.array([_canvas_x, 0])
+        pp=np.array([        x, y])
+        if np.linalg.norm(pp-p0, ord=2)<100:        # Recognition
+            g_recogFlag = True
+        elif np.linalg.norm(pp-p1, ord=2)<100:      # Clear
+            clearCanvas()
+        else:
+            g_mouseBtn = 0      # left button
+    if event == cv2.EVENT_LBUTTONUP:
+        if g_mouseBtn==0:
+            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (0,0,0), black_thinkness)
+        g_mouseBtn = -1
+    if event == cv2.EVENT_RBUTTONDOWN:
+        g_mouseBtn = 1      # right button
+    if event == cv2.EVENT_RBUTTONUP:
+        if g_mouseBtn==1:
+            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (255,255,255), white_thinkness)
+        g_mouseBtn = -1
+    if event == cv2.EVENT_MOUSEMOVE:
+        if g_mouseBtn==0:
+            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (0,0,0), black_thinkness)
+        elif g_mouseBtn==1:
+            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (255,255,255), white_thinkness)
+    g_mouseX = x
+    g_mouseY = y
+
+def onTrackbar(x):
+    global g_threshold
+    g_threshold = x
+    print(x)
+
+
 
 def main():
-    global canvas
-    global threshold
-    global recogFlag
+    _H=0
+    _W=1
+    _C=2
+
+    global g_canvas
+    global g_threshold
+    global g_recogFlag
 
     # Plugin initialization
     ie = IECore()
 
-    # text-detection-0003  in: 1,3,768,1280  
-    # out:
-    #  model/link_logits_/add   (1, 16, 192, 320)
-    #  model/segm_logits/add,   (1,  2, 192, 320)
+    # text-detection-0003  in: (1,3,768,1280)  out: model/link_logits_/add(1,16,192,320) model/segm_logits/add(1,2,192,320)
     model='text-detection-0003'
     model = './intel/'+model+'/FP16/'+model
     net_td = ie.read_network(model+'.xml', model+'.bin')
@@ -304,56 +337,55 @@ def main():
     input_batch_size, input_channel, input_height, input_width= net.inputs[input_blob].shape
     exec_net = ie.load_network(net, 'CPU')
 
-    cH, cW, cC = canvas.shape
+    clearCanvas()
 
     cv2.namedWindow('canvas')
     cv2.setMouseCallback('canvas', onMouse)
-    cv2.createTrackbar('Threshold', 'canvas', 70, 100, onTrackbar)
-
-    cv2.imshow('canvas', canvas)
-    cv2.waitKey(1)
+    cv2.createTrackbar('Threshold', 'canvas', 50, 100, onTrackbar)
 
     while True:
         key=0
-        while key != ord(' ') and recogFlag==False:
-            canvas2 = canvas.copy()
-            drawUI(canvas2)
+        while key != ord(' ') and g_recogFlag==False:
+            dispCanvas()
             key=cv2.waitKey(100)
             if key==27:
                 return
-            cv2.imshow('canvas', canvas2)
 
-        recogFlag = False
+        g_recogFlag = False
         print('text detection')
-        img = cv2.resize(canvas, (1280, 768))
-        img = img.transpose((2,0,1))
-        img = img.reshape((1,3,768,1280))
+        img = cv2.resize(g_canvas, (_canvas_x, _canvas_y))
+        img = img.transpose((_C, _H, _W))
+        img = img.reshape((1, 3, _canvas_y, _canvas_x))
         res_td = exec_net_td.infer(inputs={input_blob_td: img})
         link = res_td['model/link_logits_/add']     # 1,16,192,320
         segm = res_td['model/segm_logits/add' ]     # 1, 2,192,320
-        rects = text_detection_postprocess(link, segm, (1280, 768), threshold/100., threshold/100.)
+        rects = text_detection_postprocess(link, segm, (_canvas_x, _canvas_y), g_threshold/100., g_threshold/100.)
         print('text detection - completed')
 
-        canvas2 = canvas.copy()
-        for rect in rects:
+        canvas2 = g_canvas.copy()
+        for i, rect in enumerate(rects):
             box = cv2.boxPoints(rect).astype(np.int32)
-            cv2.polylines(canvas2, [box], True, (0,255,255), 4)
+            cv2.polylines(canvas2, [box], True, (255,0,0), 4)
             cv2.imshow('canvas', canvas2)
+            cv2.waitKey(1)
 
             most_left_idx, most_left = topLeftPoint(box)
-            crop = cropRotatedImage(canvas, box, most_left_idx)
-
-            # Read and pre-process input image (NOTE: one image only)
-            #input_image = preprocess_input(canvas, input_height, input_width)[None,:,:,:]
+            crop = cropRotatedImage(g_canvas, box, most_left_idx)
             input_image = preprocess_input(crop, input_height, input_width)[None,:,:,:]
 
-            # Start sync inference
             preds = exec_net.infer(inputs={input_blob: input_image})
             preds = preds[out_blob]
             result = codec.decode(preds)
-            print('OCR result: ', result)
+            print('OCR result ({}): {}'.format(i, result))
+
         print("done")
+
     return
 
 if __name__ == '__main__':
+    print('Handwritten Japanese OCR Demo')
+    print('ESC: Quit')
+    print('Mouse L-Button: Draw')
+    print('Mouse R-Button: Erase')
+    print('Threshold = Text area detect threshold')
     main()
