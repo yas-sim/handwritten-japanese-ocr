@@ -1,10 +1,10 @@
 # Handwritten Japanese OCR  with Touch panel demo
 This is a handwritten Japanese OCR demo program based on a sample program from [**Intel(r) Distribution of OpenVINO(tm) Toolkit 2020.2**](https://software.intel.com/en-us/openvino-toolkit) (`handwritten-japanese-recognition.py`)  
 The demo program has simple UI and you can write Japanese on the screen with touch panel by your finger tip and try Japanese OCR performance.  
-The demo uses a pre-trained text-detection DL model from Intel(r) Open Model Zoo (OMZ) to detect the text region from the canvas and run OCR for those texts.  
+The demo uses a pre-trained text-detection DL model from Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo) to detect the text region from the canvas and run OCR for those texts.  
 手書き日本語OCRデモです。[**Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2**](https://software.intel.com/en-us/openvino-toolkit)に付属の`handwritten-japanese-recognition.py`デモを大幅に書き換えています。  
 簡単なUIを用意していますのでタッチパネル付きPCがあれば指で字を書いて認識させるデモを行うことが可能です。  
-Intel(r) Open Model Zooの文字検出モデルも使用し、自動領域識別も行っています。  
+Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo)の文字検出モデルも使用し、自動領域識別も行っています。  
 
 ![OCR demo](./resources/ocr-demo.gif)  
 
@@ -15,7 +15,7 @@ The demo expects the following model in the Intermediate Representation (IR) for
    * handwritten-japanese-recognition-0001
    * text-detection-0003
 
-You can download those models from OpenVINO Open Model Zoo.
+You can download those models from OpenVINO [Open Model Zoo](https://github.com/opencv/open_model_zoo).
 In the `models.lst` are the list of appropriate models for this demo
 that can be obtained via `Model downloader`.
 Please see more information about `Model downloader` [here](../../../tools/downloader/README.md).
