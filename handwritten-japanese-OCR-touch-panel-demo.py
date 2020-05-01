@@ -16,7 +16,6 @@ Handwritten Japanese OCR demo program
  limitations under the License.
 """
 
-from __future__ import print_function
 import os
 import sys
 import time
@@ -43,18 +42,6 @@ def preprocess_input(src, height, width):
     ratio = float(src.shape[1]) / float(src.shape[0])
     tw = int(height * ratio)
 
-    #cv2.imshow('input image', src)
-    #cv2.waitKey(0)
-    #src = cv2.GaussianBlur(src, (3,3), 0)
-    #src = cv2.medianBlur(src, 3)
-    #cv2.imshow('input image', src)
-    #cv2.waitKey(0)
-
-    #src = cv2.adaptiveThreshold(src, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 5, 2)
-    #_, src = cv2.threshold(src, 0, 255, cv2.THRESH_OTSU)
-    #kernel = np.ones((3,3), np.uint8)
-    #src = cv2.morphologyEx(src, cv2.MORPH_OPEN, kernel)
-
     rsz = cv2.resize(src, (tw, height), interpolation=cv2.INTER_CUBIC).astype(np.float32)
     outimg = np.full((height, width), 255., np.float32)
     rsz_h, rsz_w = rsz.shape
@@ -64,17 +51,6 @@ def preprocess_input(src, height, width):
 
     outimg = np.reshape(outimg, (1, height, width))
     return outimg
-
-    '''
-    rsz = cv2.resize(src, (tw, height), interpolation=cv2.INTER_AREA).astype(np.float32)
-    # [h,w] -> [c,h,w]
-    img = rsz[None, :, :]
-    _, h, w = img.shape
-    # right edge padding
-    pad_img = np.pad(img, ((0, 0), (0, height - h), (0, width -  w)), mode='edge')
-    return pad_img
-    '''
-
 
 def softmax_channel(data):
     for i in range(0, len(data), 2):
@@ -231,7 +207,7 @@ def cropRotatedImage(image, points, top_left_point_idx):
     point0 = points[ top_left_point_idx       ]
     point1 = points[(top_left_point_idx+1) % 4]
     point2 = points[(top_left_point_idx+2) % 4]
-    target_size = (int(np.linalg.norm(point2-point1)), int(np.linalg.norm(point1-point0)), 3)
+    target_size = (int(np.linalg.norm(point2-point1, ord=2)), int(np.linalg.norm(point1-point0, ord=2)), 3)
 
     crop = np.zeros(target_size, np.uint8)
     _from = np.array([ point0, point1, point2 ], dtype=np.float32)
@@ -330,7 +306,7 @@ def main():
 
     cH, cW, cC = canvas.shape
 
-    cv2.namedWindow('canvas', cv2.WINDOW_NORMAL)
+    cv2.namedWindow('canvas')
     cv2.setMouseCallback('canvas', onMouse)
     cv2.createTrackbar('Threshold', 'canvas', 70, 100, onTrackbar)
 

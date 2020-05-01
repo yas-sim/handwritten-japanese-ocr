@@ -27,19 +27,22 @@ The demo depends on:
 To install all the required Python modules you can use:
 
 ``` sh
-pip install -r requirements.txt
+(Linux) pip3 install -r requirements.txt
+(Win10) pip install -r requirements.txt
 ```
 
 #### 2. Download DL models from OMZ
 Use `Model Downloader` to download required models.
 ``` sh
-python3 $INTEL_OPENVINO_DIR/deployment_tools/tools/model_downloader/downloader.py --list models.lst
+(Linux) python3 $INTEL_OPENVINO_DIR/deployment_tools/tools/model_downloader/downloader.py --list models.lst
+(Win10) python "%INTEL_OPENVINO_DIR%\deployment_tools\tools\model_downloader\downloader.py" --list models.lst
 ```
 
 #### 3. Run the demo app
 This program doesn't accept any command line arguments. All file names and paths are hard coded in the source code.
 ``` sh
-python3 handwritten-japanese-OCR-touch-panel-demo.py
+(Linux) python3 handwritten-japanese-OCR-touch-panel-demo.py
+(Win10) python handwritten-japanese-OCR-touch-panel-demo.py
 ```
 
 Please make sure following files are placed at proper location.
