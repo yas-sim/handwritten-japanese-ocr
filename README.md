@@ -49,19 +49,21 @@ This program doesn't accept any command line arguments. All file names and paths
 ```
 
 Please make sure following files are placed at proper location.
-./
-+ handwritten_japanese-OCR-touch-panel-demo.py
-+ data
-| + kondate_nakayosi_char_list.txt
-+ intel
-| + handwritten-japanese-recognition-0001
-| | + FP16
-| | | + handwritten-japanese-recognition-0001.xml
-| | | + handwritten-japanese-recognition-0001.bin
-| + text-detection-0003
-| | + FP16
-| | | + text-detection-0003.xml
-| | | + text-detection-0003.bin
+```
+./  
++ handwritten_japanese-OCR-touch-panel-demo.py  
++ data  
+| + kondate_nakayosi_char_list.txt  
++ intel  
+| + handwritten-japanese-recognition-0001  
+| | + FP16  
+| | | + handwritten-japanese-recognition-0001.xml  
+| | | + handwritten-japanese-recognition-0001.bin  
+| + text-detection-0003  
+| | + FP16  
+| | | + text-detection-0003.xml  
+| | | + text-detection-0003.bin  
+```
 
 ## Demo Output
 The application uses the terminal to show resulting recognition text and inference performance.
