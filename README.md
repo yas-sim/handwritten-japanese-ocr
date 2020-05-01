@@ -3,6 +3,8 @@ This is a handwritten Japanese OCR demo program based on a sample program from O
 The demo program has simple UI and you can write Japanese on the screen with touch panel by your finger tip and try Japanese OCR performance.
 The demo uses pre-trained text-detection from Intel Open Model Zoo (OMZ) to detect text region from the canvas and run OCR for those texts.
 
+![OCR demo](./resources/ocr-demo.gif)  
+
 ## Required DL models to run this demo
 
 The demo expects the following model in the Intermediate Representation (IR) format:
