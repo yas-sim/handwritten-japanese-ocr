@@ -22,6 +22,8 @@ Please see more information about `Model downloader` [here](../../../tools/downl
 
 ## How to run
 
+(Assuming you have successfully installed and setup OpenVINO 2020.2. If you haven't done it yet, go to OpenVINO web page and follow the [*Get Started*](https://software.intel.com/en-us/openvino-toolkit/documentation/get-started) guide to do it)  
+
 ### 1. Install dependencies  
 The demo depends on:
 - opencv-python
