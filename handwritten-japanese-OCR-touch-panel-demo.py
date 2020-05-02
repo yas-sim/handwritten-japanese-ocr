@@ -27,6 +27,8 @@ import cv2
 import numpy as np
 from functools import reduce
 
+from PIL import ImageFont, ImageDraw, Image
+
 from openvino.inference_engine import IENetwork, IECore
 from utils.codec import CTCCodec
 
@@ -217,14 +219,18 @@ def cropRotatedImage(image, points, top_left_point_idx):
     _X=1
     _Y=0
     _C=2
+    
     point0 = points[ top_left_point_idx       ]
     point1 = points[(top_left_point_idx+1) % 4]
     point2 = points[(top_left_point_idx+2) % 4]
+    
     target_size = (int(np.linalg.norm(point2-point1, ord=2)), int(np.linalg.norm(point1-point0, ord=2)), 3)
 
-    crop = np.zeros(target_size, np.uint8)
+    crop = np.full(target_size, 255, np.uint8)
+    
     _from = np.array([ point0, point1, point2 ], dtype=np.float32)
     _to   = np.array([ [0,0], [target_size[_X]-1, 0], [target_size[_X]-1, target_size[_Y]-1] ], dtype=np.float32)
+
     M    = cv2.getAffineTransform(_from, _to)
     crop = cv2.warpAffine(image, M, (target_size[_X], target_size[_Y]))
 
@@ -236,16 +242,28 @@ g_mouseX=-1
 g_mouseY=-1
 g_mouseBtn = -1  # 0=left, 1=right, -1=none
 
-g_recogFlag = False
+g_UIState = 0       # 0: normal UI, 1: wait for a click
+g_clickedFlag = False
+g_recogFlag   = False
 
 g_threshold = 50
 g_canvas = []
 
+def putJapaneseText(img, x, y, text, size=32):
+    font = ImageFont.truetype('meiryo.ttc', size)
+    img_pil = Image.fromarray(img)
+    draw = ImageDraw.Draw(img_pil)
+    w,h = draw.textsize(text, font)
+    draw.text((x, y-h*1.2), text, font=font, fill=(255,0,0,0))
+    img = np.array(img_pil)
+    return img
+
+
 def drawUI(image):
     cv2.circle(image, (0               , 0), 100, (   0, 255, 255), -1)
     cv2.circle(image, (image.shape[1]-1, 0), 100, (   0, 255,   0), -1)
-    cv2.putText(image, 'RECOGNIZE', (10                ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 1)
-    cv2.putText(image, 'CLEAR'    , (image.shape[1]-60 ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 1)
+    cv2.putText(image, 'RECOGNIZE', (4                 ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 2)
+    cv2.putText(image, 'CLEAR'    , (image.shape[1]-60 ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 2)
 
 
 def clearCanvas():
@@ -265,37 +283,45 @@ def dispCanvas():
 def onMouse(event, x, y, flags, param):
     global g_mouseX, g_mouseY
     global g_mouseBtn
-    global g_canvas
     global g_recogFlag
-    
-    black_thinkness = 12    # black pen size (mouse left button)
-    white_thinkness = 36    # white pan size (mouse right button)
+    global g_clickedFlag
+    global g_UIState
 
-    if event == cv2.EVENT_LBUTTONDOWN:
-        p0=np.array([        0, 0])
-        p1=np.array([_canvas_x, 0])
-        pp=np.array([        x, y])
-        if np.linalg.norm(pp-p0, ord=2)<100:        # Recognition
-            g_recogFlag = True
-        elif np.linalg.norm(pp-p1, ord=2)<100:      # Clear
-            clearCanvas()
-        else:
-            g_mouseBtn = 0      # left button
-    if event == cv2.EVENT_LBUTTONUP:
-        if g_mouseBtn==0:
-            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (0,0,0), black_thinkness)
-        g_mouseBtn = -1
-    if event == cv2.EVENT_RBUTTONDOWN:
-        g_mouseBtn = 1      # right button
-    if event == cv2.EVENT_RBUTTONUP:
-        if g_mouseBtn==1:
-            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (255,255,255), white_thinkness)
-        g_mouseBtn = -1
-    if event == cv2.EVENT_MOUSEMOVE:
-        if g_mouseBtn==0:
-            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (0,0,0), black_thinkness)
-        elif g_mouseBtn==1:
-            cv2.line(g_canvas, (g_mouseX, g_mouseY), (x, y), (255,255,255), white_thinkness)
+    global g_canvas
+
+    black_pen = lambda x1, y1, x2, y2: cv2.line(g_canvas, (x1, y1), (x2, y2), (  0,  0,  0), thickness=12)
+    white_pen = lambda x1, y1, x2, y2: cv2.line(g_canvas, (x1, y1), (x2, y2), (255,255,255), thickness=36)
+
+    if g_UIState==0:      # Normal UI
+        if event == cv2.EVENT_LBUTTONDOWN:
+            p0=np.array([        0, 0])
+            p1=np.array([_canvas_x, 0])
+            pp=np.array([        x, y])
+            if np.linalg.norm(pp-p0, ord=2)<100:        # Recognition
+                g_recogFlag = True
+            elif np.linalg.norm(pp-p1, ord=2)<100:      # Clear
+                clearCanvas()
+            else:
+                g_mouseBtn = 0      # left button
+        if event == cv2.EVENT_LBUTTONUP:
+            if g_mouseBtn==0:
+                black_pen(g_mouseX, g_mouseY, x, y)
+            g_mouseBtn = -1
+        if event == cv2.EVENT_RBUTTONDOWN:
+            g_mouseBtn = 1          # right button
+        if event == cv2.EVENT_RBUTTONUP:
+            if g_mouseBtn==1:
+                white_pen(g_mouseX, g_mouseY, x, y)
+            g_mouseBtn = -1
+        if event == cv2.EVENT_MOUSEMOVE:
+            if   g_mouseBtn==0:
+                black_pen(g_mouseX, g_mouseY, x, y)
+            elif g_mouseBtn==1:
+                white_pen(g_mouseX, g_mouseY, x, y)
+    elif g_UIState==1:      # no draw. wait for click state
+        if event == cv2.EVENT_LBUTTONUP:
+            g_clickedFlag=True
+
     g_mouseX = x
     g_mouseY = y
 
@@ -304,7 +330,7 @@ def onTrackbar(x):
     g_threshold = x
     print(x)
 
-
+# ----------------------------------------------------------------------------
 
 def main():
     _H=0
@@ -313,7 +339,9 @@ def main():
 
     global g_canvas
     global g_threshold
+    global g_UIState
     global g_recogFlag
+    global g_clickedFlag
 
     # Plugin initialization
     ie = IECore()
@@ -323,7 +351,7 @@ def main():
     model = './intel/'+model+'/FP16/'+model
     net_td = ie.read_network(model+'.xml', model+'.bin')
     input_blob_td = next(iter(net_td.inputs))
-    out_blob_td = next(iter(net_td.outputs))
+    out_blob_td   = next(iter(net_td.outputs))
     exec_net_td = ie.load_network(net_td, 'CPU')
 
     # handwritten-japanese-recognition
@@ -331,27 +359,30 @@ def main():
     model = './intel/'+model+'/FP16/'+model
     net = ie.read_network(model+'.xml', model+'.bin')
     input_blob = next(iter(net.inputs))
-    out_blob = next(iter(net.outputs))
-    characters = get_characters('data/kondate_nakayosi_char_list.txt')
-    codec = CTCCodec(characters)
+    out_blob   = next(iter(net.outputs))
     input_batch_size, input_channel, input_height, input_width= net.inputs[input_blob].shape
     exec_net = ie.load_network(net, 'CPU')
 
-    clearCanvas()
+    characters = get_characters('data/kondate_nakayosi_char_list.txt')
+    codec = CTCCodec(characters)
 
+    clearCanvas()
     cv2.namedWindow('canvas')
     cv2.setMouseCallback('canvas', onMouse)
     cv2.createTrackbar('Threshold', 'canvas', 50, 100, onTrackbar)
 
     while True:
-        key=0
-        while key != ord(' ') and g_recogFlag==False:
+        g_UIState = 0
+        while g_recogFlag==False:
             dispCanvas()
             key=cv2.waitKey(100)
             if key==27:
                 return
-
+            if key==ord(' '):
+                break
         g_recogFlag = False
+        g_UIState = 1
+
         print('text detection')
         img = cv2.resize(g_canvas, (_canvas_x, _canvas_y))
         img = img.transpose((_C, _H, _W))
@@ -366,8 +397,6 @@ def main():
         for i, rect in enumerate(rects):
             box = cv2.boxPoints(rect).astype(np.int32)
             cv2.polylines(canvas2, [box], True, (255,0,0), 4)
-            cv2.imshow('canvas', canvas2)
-            cv2.waitKey(1)
 
             most_left_idx, most_left = topLeftPoint(box)
             crop = cropRotatedImage(g_canvas, box, most_left_idx)
@@ -377,8 +406,17 @@ def main():
             preds = preds[out_blob]
             result = codec.decode(preds)
             print('OCR result ({}): {}'.format(i, result))
+            
+            canvas2 = putJapaneseText(canvas2, most_left[0], most_left[1], result[0])
+            cv2.imshow('canvas', canvas2)
+            cv2.waitKey(1)
 
-        print("done")
+        cv2.putText(canvas2, 'Hit any key, tap screen or click L-button to continue', (0, 40), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 2)
+        cv2.imshow('canvas', canvas2)
+        g_clickedFlag=False
+        key=-1
+        while g_clickedFlag==False and key==-1:
+            key=cv2.waitKey(100)
 
     return
 
