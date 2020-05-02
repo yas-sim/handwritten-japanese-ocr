@@ -336,7 +336,6 @@ def onMouse(event, x, y, flags, param):
 def onTrackbar(x):
     global g_threshold
     g_threshold = x
-    print(x)
 
 # ----------------------------------------------------------------------------
 
