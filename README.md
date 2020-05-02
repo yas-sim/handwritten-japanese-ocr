@@ -70,7 +70,7 @@ Please make sure the following files are placed at the proper location.
 The application uses the terminal to show resulting recognition text strings.
 
 ## Tested Environment
-- Windows 10 x64 1909
+- Windows 10 x64 1909 and Ubuntu 18.04 LTS
 - Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2
 - Python 3.6.5 x64
 
