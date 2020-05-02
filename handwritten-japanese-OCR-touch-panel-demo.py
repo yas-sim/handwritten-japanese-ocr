@@ -250,7 +250,15 @@ g_threshold = 50
 g_canvas = []
 
 def putJapaneseText(img, x, y, text, size=32):
-    font = ImageFont.truetype('meiryo.ttc', size)
+    if os.name =='nt':
+        fontName = 'meiryo.ttc'                 # Win10
+    elif os.name == 'posix':
+        fontName = 'NotoSansCJK-Regular.ttc'    # Ubuntu
+    elif os.name == 'Darwin':
+        fontName = 'Osaka.ttf'                  # Not tested ...
+    else:
+        raise Exception('Unknown OS')
+    font = ImageFont.truetype(fontName, size)
     img_pil = Image.fromarray(img)
     draw = ImageDraw.Draw(img_pil)
     w,h = draw.textsize(text, font)
