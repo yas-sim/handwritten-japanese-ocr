@@ -66,15 +66,15 @@ Please make sure the following files are placed at the proper location.
 | | | + text-detection-0003.bin  
 ```
 
-## Demo Output
-The application uses the terminal to show resulting recognition text strings.
+## Demo Output  
+The application uses the terminal to show resulting recognition text strings.  
 
-## Tested Environment
-- Windows 10 x64 1909 and Ubuntu 18.04 LTS
-- Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2
-- Python 3.6.5 x64
+## Tested Environment  
+- Windows 10 x64 1909 and Ubuntu 18.04 LTS  
+- Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2  
+- Python 3.6.5 x64  
 
-## See Also
-* [Using Open Model Zoo demos](../../README.md)
-* [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
-* [Model Downloader](../../../tools/downloader/README.md)
+## See Also  
+* [Using Open Model Zoo demos](../../README.md)  
+* [Model Optimizer](https://docs.openvinotoolkit.org/latest/_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)  
+* [Model Downloader](../../../tools/downloader/README.md)  
