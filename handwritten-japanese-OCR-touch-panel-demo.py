@@ -257,13 +257,19 @@ def putJapaneseText(img, x, y, text, size=32):
     elif os.name == 'Darwin':
         fontName = 'Osaka.ttf'                  # Not tested ...
     else:
-        raise Exception('Unknown OS')
-    font = ImageFont.truetype(fontName, size)
-    img_pil = Image.fromarray(img)
-    draw = ImageDraw.Draw(img_pil)
-    w,h = draw.textsize(text, font)
-    draw.text((x, y-h*1.2), text, font=font, fill=(255,0,0,0))
-    img = np.array(img_pil)
+        fontName = 'UnknownOS'
+
+    try:
+        font = ImageFont.truetype(fontName, size)
+    except IOError:
+        cv2.putText(img, 'font "{}" not found'.format(fontName), (x,y-8), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,255), 2)
+    else:
+        img_pil = Image.fromarray(img)
+        draw = ImageDraw.Draw(img_pil)
+        w,h = draw.textsize(text, font)
+        draw.text((x, y-h*1.2), text, font=font, fill=(255,0,0,0))
+        img = np.array(img_pil)
+
     return img
 
 
