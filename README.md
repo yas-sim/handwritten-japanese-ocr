@@ -2,6 +2,7 @@
 This is a handwritten Japanese OCR demo program based on a sample program from [**Intel(r) Distribution of OpenVINO(tm) Toolkit 2020.2**](https://software.intel.com/en-us/openvino-toolkit) (`handwritten-japanese-recognition.py`)  
 The demo program has simple UI and you can write Japanese on the screen with the touch panel by your finger tip and try Japanese OCR performance.  
 The demo uses a pre-trained text-detection DL model from Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo) to detect the text regions from the canvas and run a DL based OCR model for those text regions.  
+
 手書き日本語OCRデモです。[**Intel(r) Distribution of OpenVINO(tm) toolkit 2020.2**](https://software.intel.com/en-us/openvino-toolkit)に付属の`handwritten-japanese-recognition.py`デモを大幅に書き換えています。  
 簡単なUIを用意していますのでタッチパネル付きPCがあれば指で字を書いて認識させるデモを行うことが可能です。  
 Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo)の文字検出DLモデルで自動領域識別も行ない、DL-OCRモデルで文字認識を行います。  
