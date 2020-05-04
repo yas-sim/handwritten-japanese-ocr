@@ -251,7 +251,8 @@ g_canvas = []
 
 def putJapaneseText(img, x, y, text, size=32):
     if os.name =='nt':
-        fontName = 'meiryo.ttc'                 # Win10
+        #fontName = 'meiryo.ttc'                 # Win10
+        fontName = 'msgothic.ttc'                 # Win10
     elif os.name == 'posix':
         fontName = 'NotoSansCJK-Regular.ttc'    # Ubuntu
     elif os.name == 'Darwin':
