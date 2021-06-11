@@ -364,7 +364,7 @@ def main():
     model='text-detection-0003'
     model = './intel/'+model+'/FP16/'+model
     net_td = ie.read_network(model+'.xml', model+'.bin')
-    input_blob_td = next(iter(net_td.inputs))
+    input_blob_td = next(iter(net_td.input_info))
     out_blob_td   = next(iter(net_td.outputs))
     exec_net_td = ie.load_network(net_td, 'CPU')
 
@@ -372,9 +372,9 @@ def main():
     model = 'handwritten-japanese-recognition-0001'
     model = './intel/'+model+'/FP16/'+model
     net = ie.read_network(model+'.xml', model+'.bin')
-    input_blob = next(iter(net.inputs))
+    input_blob = next(iter(net.input_info))
     out_blob   = next(iter(net.outputs))
-    input_batch_size, input_channel, input_height, input_width= net.inputs[input_blob].shape
+    input_batch_size, input_channel, input_height, input_width= net.input_info[input_blob].tensor_desc.dims
     exec_net = ie.load_network(net, 'CPU')
 
     characters = get_characters('data/kondate_nakayosi_char_list.txt')
