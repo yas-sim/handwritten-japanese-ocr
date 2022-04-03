@@ -50,11 +50,11 @@ static PyObject* postprocess_bridge(PyObject* self, PyObject* args) {
         cls_shape.push_back(s_shape[i]);
     }
     float *cls_data_pointer = static_cast<float*>(PyArray_DATA(segm_logits));
-    std::cout << "postprocess";
+
     auto rects = postProcess(link_data_pointer, link_shape, link_conf_threshold,
                              cls_data_pointer,  cls_shape,  cls_conf_threshold, 
                              input_w, input_h);
-    std::cout << " - done" << std::endl;
+
     int out_size = rects.size();
 
     // Create a Numpy object to store result

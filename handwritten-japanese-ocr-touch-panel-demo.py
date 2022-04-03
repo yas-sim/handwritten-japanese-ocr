@@ -29,8 +29,6 @@ from functools import reduce
 
 from PIL import ImageFont, ImageDraw, Image
 
-from text_detection_postprocess import postprocess
-
 from openvino.preprocess import PrePostProcessor
 from openvino.runtime import AsyncInferQueue, Core, InferRequest, Layout, Type
 from utils.codec import CTCCodec
@@ -62,6 +60,135 @@ def preprocess_input(src, height, width):
     return outimg
 
 # -----------------------------------------------------------------
+
+def softmax_channel(data):
+    for i in range(0, len(data), 2):
+        m=max(data[i], data[i+1])
+        data[i  ] = math.exp(data[i  ]-m)
+        data[i+1] = math.exp(data[i+1]-m)
+        s=data[i  ]+data[i+1]
+        data[i  ]/=s
+        data[i+1]/=s
+    return data
+
+
+def findRoot(point, group_mask):
+    root = point
+    update_parent = False
+    while group_mask[root] != -1:
+        root = group_mask[root]
+        update_parent = True
+    if update_parent:
+        group_mask[point] = root
+    return root
+
+
+def join(p1, p2, group_mask):
+    root1 = findRoot(p1, group_mask)
+    root2 = findRoot(p2, group_mask)
+    if root1 != root2:
+        group_mask[root1] = root2
+
+
+def get_all(points, w, h, group_mask):
+    root_map = {}
+    mask = np.zeros((h, w), np.int32)
+    for px, py in points:
+        point_root = findRoot(px+py*w, group_mask)
+        if not point_root in root_map:
+            root_map[point_root] = len(root_map)+1
+        mask[py, px] = root_map[point_root]
+    return mask
+
+
+def decodeImageByJoin(segm_data, segm_data_shape, link_data, link_data_shape, segm_conf_thresh, link_conf_thresh):
+    h = segm_data_shape[1]
+    w = segm_data_shape[2]
+    pixel_mask = np.full((h*w,), False, dtype=np.bool)
+    group_mask = {}
+    points     = []
+    for i, segm in enumerate(segm_data):
+        if segm>segm_conf_thresh:
+            pixel_mask[i] = True
+            points.append((i%w, i//w))
+            group_mask[i] = -1
+        else:
+            pixel_mask[i] = False
+    
+    link_mask = np.array([ ld>=link_conf_thresh for ld in link_data ])
+
+    neighbours = int(link_data_shape[3])
+    for px, py in points:
+        neighbor = 0
+        for ny in range(py-1, py+1+1):
+            for nx in range(px-1, px+1+1):
+                if nx==px and ny==py:
+                    continue
+                if nx<0 or nx>=w or ny<0 or ny>=h:
+                    continue
+                pixel_value = pixel_mask[ny*w + nx]
+                link_value  = link_mask [py*w + px*neighbours + neighbor ]
+                if pixel_value and link_value:
+                    join(px+py*w, nx+ny*w, group_mask)
+                neighbor+=1
+    return get_all(points, w, h, group_mask)
+
+
+def maskToBoxes(mask, min_area, min_height, image_size):
+    _X=0
+    _Y=1
+    bboxes = []
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(mask)
+    max_bbox_idx = int(max_val)
+    resized_mask = cv2.resize(mask, image_size, interpolation=cv2.INTER_NEAREST)
+
+    for i in range(1, max_bbox_idx+1):
+        bbox_mask = np.where(resized_mask==i, 255, 0).astype(np.uint8)
+        contours, hierarchy = cv2.findContours(bbox_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        if len(contours)==0:
+            continue
+        center, size, angle = cv2.minAreaRect(contours[0])
+        if min(size[_X], size[_Y]) < min_height:
+            continue
+        if size[_X]*size[_Y] < min_area:
+            continue
+        bboxes.append((center, size, angle))
+    return bboxes
+
+
+def text_detection_postprocess(link, segm, image_size, segm_conf_thresh, link_conf_thresh):
+    _N = 0
+    _C = 1
+    _H = 2
+    _W = 3
+    kMinArea   = 300
+    kMinHeight = 10
+
+    link_shape = link.shape
+    link_data_size = reduce(lambda a, b: a*b, link_shape)
+    link_data = link.transpose((_N, _H, _W, _C))
+    link_data = link_data.flatten()
+    link_data = softmax_channel(link_data)
+    link_data = link_data.reshape((-1,2))[:,1]
+    new_link_data_shape = [ link_shape[0], link_shape[2], link_shape[3], link_shape[1]/2 ]
+
+    segm_shape = segm.shape
+    segm_data_size = reduce(lambda a, b: a*b, segm_shape)
+    segm_data = segm.transpose((_N, _H, _W, _C))
+    segm_data = segm_data.flatten()
+    segm_data = softmax_channel(segm_data)
+    segm_data = segm_data.reshape((-1,2))[:,1]
+    new_segm_data_shape = [ segm_shape[0], segm_shape[2], segm_shape[3], segm_shape[1]/2 ]
+
+    mask = decodeImageByJoin(segm_data, new_segm_data_shape, link_data, new_link_data_shape, 
+                             segm_conf_thresh, link_conf_thresh)
+    rects = maskToBoxes(mask, kMinArea, kMinHeight, image_size)
+
+    return rects
+
+
+
+# ----------------------------------------------------------------------------
 
 def topLeftPoint(points):
     big_number = 1e10
@@ -120,7 +247,8 @@ g_UIState = 0       # 0: normal UI, 1: wait for a click
 g_clickedFlag = False
 g_recogFlag   = False
 
-g_threshold = 50
+g_lnk_th = 50
+g_cls_th = 15
 g_canvas = []
 
 def putJapaneseText(img, x, y, text, size=32):
@@ -214,9 +342,13 @@ def onMouse(event, x, y, flags, param):
     g_mouseX = x
     g_mouseY = y
 
-def onTrackbar(x):
-    global g_threshold
-    g_threshold = x
+def onTrackbarLnk(x):
+    global g_lnk_th
+    g_lnk_th = x
+
+def onTrackbarCls(x):
+    global g_cls_th
+    g_cls_th = x
 
 # ----------------------------------------------------------------------------
 
@@ -234,12 +366,11 @@ def main():
     # Plugin initialization
     ie = Core()
 
-    model_root = 'C:/Users/yas_s/Documents/Intel/OpenVINO/work/handwritten-japanese-ocr'
+    model_root = '.'
 
     # text-detection-0003  in: (1,3,768,1280)  out: model/link_logits_/add(1,16,192,320) model/segm_logits/add(1,2,192,320)
     model='text-detection-0003'
     model = os.path.join(model_root, 'intel', model, 'FP16', model)
-    print(model)
     net_td = ie.read_model(model+'.xml')
     input_blob_td = net_td.inputs[0].get_any_name()
     out_blob_td   = net_td.outputs[0].get_any_name()
@@ -260,7 +391,8 @@ def main():
     clearCanvas()
     cv2.namedWindow('canvas')
     cv2.setMouseCallback('canvas', onMouse)
-    cv2.createTrackbar('Threshold', 'canvas', 50, 100, onTrackbar)
+    cv2.createTrackbar('Link           Threshold', 'canvas', 50, 100, onTrackbarLnk)
+    cv2.createTrackbar('Classification Threshold', 'canvas', 15, 100, onTrackbarCls)
 
     while True:
         g_UIState = 0
@@ -279,15 +411,12 @@ def main():
         img = img.reshape((1, _canvas_y, _canvas_x, 3))
         res_td = exec_net_td.infer_new_request(inputs={input_blob_td: img})
         keys_td = list(res_td.keys())
-        link = res_td[keys_td[0]]   # 'model/link_logits_/add'  1,192,320,16
-        segm = res_td[keys_td[1]]   # 'model/segm_logits/add'   1,192,320,2
-        print('text detection - postprocess')
-        rects = postprocess(link, segm, _canvas_x, _canvas_y, g_threshold/100., g_threshold/100.)
-        print('text detection - completed')
+        link = res_td[keys_td[1]].transpose((0,3,1,2))   # 'model/link_logits_/add'  1,192,320,16
+        segm = res_td[keys_td[0]].transpose((0,3,1,2))   # 'model/segm_logits/add'   1,192,320,2
+        rects = text_detection_postprocess(link, segm, (_canvas_x, _canvas_y), g_lnk_th/100., g_cls_th/100.)
 
         canvas2 = g_canvas.copy()
-        for i, rect_ in enumerate(rects):
-            rect = ((rect_[0], rect_[1]), (rect_[2], rect_[3]), rect_[4])
+        for i, rect in enumerate(rects):
             box = cv2.boxPoints(rect).astype(np.int32)
             cv2.polylines(canvas2, [box], True, (255,0,0), 4)
 
