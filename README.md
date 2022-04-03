@@ -7,6 +7,9 @@ The demo uses a pre-trained text-detection DL model (`text-detection-0003`) from
 簡単なUIを用意していますのでタッチパネル付きPCがあれば指で字を書いて認識させるデモを行うことが可能です。  
 Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo)の文字検出DLモデル(`text-detection-0003`)で自動領域識別も行ない、DL-OCRモデルで文字認識を行います。  
 
+[NEW 03-Apr-2022] Added C++ postprocess version (handwritten-japanese-ocr-touch-panel-demo-cpp.py).
+[NEW 03-Apr-2022] Migrated OpenVINO API to API 2.0 for both native Python version and C++ postprocess version. (OpenVINO 2022.1 support)
+
 ![OCR demo](./resources/ocr-demo.gif)  
 
 ### Required DL Models to Run This Demo
@@ -32,15 +35,26 @@ The demo depends on:
 To install all the required Python modules you can use:
 
 ``` sh
-(Linux) pip3 install -r requirements.txt
-(Win10) pip install -r requirements.txt
+(Linux) python3 -m pip install -r requirements.txt
+(Win10) python -m pip install -r requirements.txt
 ```
 
 ### 2. Download DL models from OMZ
 Use `Model Downloader` to download the required models.
 ``` sh
-(Linux) python3 $INTEL_OPENVINO_DIR/deployment_tools/tools/model_downloader/downloader.py --list models.lst
-(Win10) python "%INTEL_OPENVINO_DIR%\deployment_tools\tools\model_downloader\downloader.py" --list models.lst
+(Linux/Win10) omz_downloader --list models.lst
+```
+
+### 2.5 Build C++ postprocess Python module (Optional)
+Prerequisites: To build the C++ postprocess Python module, you need to install OpenVINO dev package and OpenCV dev package. Please refer to the OpenVINO install guide for details.  
+```sh
+(Linux)
+  source setup_ocv_vars.sh
+  ./build.sh
+
+(Win10)
+  setup_ocv_vars.bat
+  build.bat
 ```
 
 ### 3. Run the demo app
@@ -71,9 +85,9 @@ Please make sure the following files are placed at the proper location.
 The application uses the terminal to show resulting recognition text strings.  
 
 ## Tested Environment  
-- Windows 10 x64 1909 and Ubuntu 18.04 LTS  
-- Intel(r) Distribution of OpenVINO(tm) toolkit 2021.3  
-- Python 3.6.5 x64  
+- Windows 11 x64  
+- Intel(r) Distribution of OpenVINO(tm) toolkit 2022.1  
+- Python 3.7 x64  
 
 ## See Also  
 * [Using Open Model Zoo demos](../../README.md)  
