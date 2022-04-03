@@ -215,118 +215,35 @@ cv::Mat decodeImageByJoin(
 // output = link - model/link_logits_/add, 1,192,320,16
 //          segm - model/segm_logits/add, 1,192,130,2
 
-/*
-std::vector<cv::RotatedRect> postProcess(
-    const std::map<std::string, ov::runtime::Tensor>& output_tensors,
-    const cv::Size& image_size, const cv::Size& input_shape,
-    float cls_conf_threshold, float link_conf_threshold) {
-*/
 std::vector<cv::RotatedRect> postProcess(
     const float *link_data_pointer, const std::vector<int> &link_shape, float link_conf_threshold,
     const float *cls_data_pointer,  const std::vector<int> &cls_shape,  float cls_conf_threshold,
     const int input_w, const int input_h)
 {
-
     const int kMinArea = 300;
     const int kMinHeight = 10;
     cv::Size image_size(input_w, input_h);
 
-/*
-    std::string kLocOutputName;
-    std::string kClsOutputName;
-
-    for (const auto& output : output_tensors) {
-        ov::Shape shape = output.second.get_shape();
-        if (shape.size() != 2 && shape.size() != 4)
-            continue;
-
-        if (shape[ov::layout::channels_idx(m_modelLayout)] == 2)
-            kClsOutputName = output.first;
-        else if (shape[ov::layout::channels_idx(m_modelLayout)] == 16)
-            kLocOutputName = output.first;
-    }
-*/
     std::vector<cv::RotatedRect> rects;
-//    if (!kLocOutputName.empty() && !kClsOutputName.empty()) {
+
     // PostProcessing for PixelLink Text Detection model
-//    ov::Shape link_shape = output_tensors.at(kLocOutputName).get_shape();
     size_t link_data_size = link_shape[0] * link_shape[1] * link_shape[2] * link_shape[3];
-
-//    float* link_data_pointer = output_tensors.at(kLocOutputName).data<float>();
-
     std::vector<float> link_data(link_data_pointer, link_data_pointer + link_data_size);;
-/*
-    if (m_modelLayout == ov::Layout("NCHW")) {
-        link_data = transpose4d(link_data, link_shape, { 0, 2, 3, 1 });
-    }
-*/
     softmax(&link_data);
-
     link_data = sliceAndGetSecondChannel(link_data);
-/*
-    ov::Shape new_link_data_shape(link_shape.size());
-    new_link_data_shape[0] = static_cast<int>(link_shape[ov::layout::batch_idx(m_modelLayout)]);
-    new_link_data_shape[1] = static_cast<int>(link_shape[ov::layout::height_idx(m_modelLayout)]);
-    new_link_data_shape[2] = static_cast<int>(link_shape[ov::layout::width_idx(m_modelLayout)]);
-    new_link_data_shape[3] = static_cast<int>(link_shape[ov::layout::channels_idx(m_modelLayout)]) / 2;
-*/
+    std::vector<int> new_link_data_shape {link_shape[0], link_shape[1], link_shape[2], link_shape[3]/2};
 
-//    ov::Shape cls_shape = output_tensors.at(kClsOutputName).get_shape();
     size_t cls_data_size = cls_shape[0] * cls_shape[1] * cls_shape[2] * cls_shape[3];
-
-//    float* cls_data_pointer = output_tensors.at(kClsOutputName).data<float>();
-
     std::vector<float> cls_data(cls_data_pointer, cls_data_pointer + cls_data_size);
-/*
-    if (m_modelLayout == ov::Layout("NCHW")) {
-        cls_data = transpose4d(cls_data, cls_shape, { 0, 2, 3, 1 });
-    }
-*/
     softmax(&cls_data);
-
     cls_data = sliceAndGetSecondChannel(cls_data);
+    std::vector<int> new_cls_data_shape {cls_shape[0], cls_shape[1], cls_shape[2], cls_shape[3]/2};
 
-/*
-    ov::Shape new_cls_data_shape(cls_shape.size());
-    new_cls_data_shape[0] = static_cast<int>(cls_shape[ov::layout::batch_idx(m_modelLayout)]);
-    new_cls_data_shape[1] = static_cast<int>(cls_shape[ov::layout::height_idx(m_modelLayout)]);
-    new_cls_data_shape[2] = static_cast<int>(cls_shape[ov::layout::width_idx(m_modelLayout)]);
-    new_cls_data_shape[3] = static_cast<int>(cls_shape[ov::layout::channels_idx(m_modelLayout)]) / 2;
-*/
-
-//    cv::Mat mask = decodeImageByJoin(
-//        cls_data, new_cls_data_shape, link_data, new_link_data_shape, cls_conf_threshold, link_conf_threshold);
     cv::Mat mask = decodeImageByJoin(
-        cls_data, cls_shape, link_data, link_shape, cls_conf_threshold, link_conf_threshold);
+        cls_data, new_cls_data_shape, link_data, new_link_data_shape, cls_conf_threshold, link_conf_threshold);
 
     rects = maskToBoxes(
         mask, static_cast<float>(kMinArea), static_cast<float>(kMinHeight), image_size);
 
-/*
-    } else {
-        // PostProcessing for Horizontal Text Detection model
-        for (const auto& output : output_tensors) {
-            ov::Shape shape = output.second.get_shape();
-            if (shape.size() != 2)
-                continue;
-
-            if (shape[1] == 5) {
-                kLocOutputName = output.first;
-            }
-        }
-
-        if (kLocOutputName.empty())
-            throw std::runtime_error("Failed to determine output blob names");
-
-        ov::Shape boxes_shape = output_tensors.at(kLocOutputName).get_shape();
-        size_t boxes_data_size = boxes_shape[0] * boxes_shape[1];
-
-        const float* boxes_data_pointer = output_tensors.at(kLocOutputName).data<float>();
-
-        rects = coordToBoxes(
-            boxes_data_pointer, boxes_data_size,
-            static_cast<float>(kMinArea), static_cast<float>(kMinHeight), input_shape, image_size);
-    }
-*/
     return rects;
 }
