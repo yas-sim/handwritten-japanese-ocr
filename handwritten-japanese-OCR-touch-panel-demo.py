@@ -29,6 +29,10 @@ from functools import reduce
 
 from PIL import ImageFont, ImageDraw, Image
 
+#sys.path.append('.')
+from text_detection_postprocess import postprocess
+#import text_detection_postprocess
+
 from openvino.inference_engine import IENetwork, IECore
 from utils.codec import CTCCodec
 
@@ -155,7 +159,7 @@ def maskToBoxes(mask, min_area, min_height, image_size):
     return bboxes
 
 
-def text_detection_postprocess(link, segm, image_size, segm_conf_thresh, link_conf_thresh):
+def text_detection_postprocess_py(link, segm, image_size, segm_conf_thresh, link_conf_thresh):
     _N = 0
     _C = 1
     _H = 2
@@ -404,11 +408,12 @@ def main():
         res_td = exec_net_td.infer(inputs={input_blob_td: img})
         link = res_td['model/link_logits_/add']     # 1,16,192,320
         segm = res_td['model/segm_logits/add' ]     # 1, 2,192,320
-        rects = text_detection_postprocess(link, segm, (_canvas_x, _canvas_y), g_threshold/100., g_threshold/100.)
+        rects = postprocess(link, segm, _canvas_x, _canvas_y, g_threshold/100., g_threshold/100.)
         print('text detection - completed')
 
         canvas2 = g_canvas.copy()
-        for i, rect in enumerate(rects):
+        for i, rect_ in enumerate(rects):
+            rect = ((rect_[0], rect_[1]), (rect_[2], rect_[3]), rect_[4])
             box = cv2.boxPoints(rect).astype(np.int32)
             cv2.polylines(canvas2, [box], True, (255,0,0), 4)
 
