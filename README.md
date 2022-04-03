@@ -45,8 +45,9 @@ Use `Model Downloader` to download the required models.
 (Linux/Win10) omz_downloader --list models.lst
 ```
 
-### 2.5 Build C++ postprocess Python module (Optional)
-Prerequisites: To build the C++ postprocess Python module, you need to install OpenVINO dev package and OpenCV dev package. Please refer to the OpenVINO install guide for details.  
+### 3. Build C++ postprocess Python module (Optional)
+Prerequisites: To build the C++ postprocess Python module, you need to install OpenVINO dev package and OpenCV dev package. OpenVINO and OpenCV must be found by cmake. 
+Please refer to the OpenVINO install guide for details.  
 ```sh
 (Linux)
   source setup_ocv_vars.sh
@@ -57,7 +58,7 @@ Prerequisites: To build the C++ postprocess Python module, you need to install O
   build.bat
 ```
 
-### 3. Run the demo app
+### 4. Run the demo app
 This program doesn't take any command line arguments. All file names and paths are hard coded in the source code.
 ``` sh
 (Linux) python3 handwritten-japanese-OCR-touch-panel-demo.py
