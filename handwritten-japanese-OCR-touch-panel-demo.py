@@ -234,9 +234,12 @@ def main():
     # Plugin initialization
     ie = Core()
 
+    model_root = 'C:/Users/yas_s/Documents/Intel/OpenVINO/work/handwritten-japanese-ocr'
+
     # text-detection-0003  in: (1,3,768,1280)  out: model/link_logits_/add(1,16,192,320) model/segm_logits/add(1,2,192,320)
     model='text-detection-0003'
-    model = './intel/'+model+'/FP16/'+model
+    model = os.path.join(model_root, 'intel', model, 'FP16', model)
+    print(model)
     net_td = ie.read_model(model+'.xml')
     input_blob_td = net_td.inputs[0].get_any_name()
     out_blob_td   = net_td.outputs[0].get_any_name()
@@ -244,7 +247,7 @@ def main():
 
     # handwritten-japanese-recognition
     model = 'handwritten-japanese-recognition-0001'
-    model = './intel/'+model+'/FP16/'+model
+    model = os.path.join(model_root, 'intel', model, 'FP16', model)
     net = ie.read_model(model+'.xml')
     input_blob = net.inputs[0].get_any_name()
     out_blob   = net.outputs[0].get_any_name()

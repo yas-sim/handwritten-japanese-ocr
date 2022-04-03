@@ -8,16 +8,15 @@
 
 // Original source - OpenVINO Open Model Zoo  text_detection_demo / text_detection.cpp
 
-void softmax(std::vector<float>* data) {
-    auto& rdata = *data;
+void softmax(std::vector<float> &data) {
     const size_t last_dim = 2;
-    for (size_t i = 0; i < rdata.size(); i += last_dim) {
-       float m = std::max(rdata[i], rdata[i+1]);
-       rdata[i] = std::exp(rdata[i] - m);
-       rdata[i + 1] = std::exp(rdata[i + 1] - m);
-       float s = rdata[i] + rdata[i + 1];
-       rdata[i] /= s;
-       rdata[i + 1] /= s;
+    for (size_t i = 0; i < data.size(); i += last_dim) {
+       float m = std::max(data[i], data[i+1]);
+       data[i] = std::exp(data[i] - m);
+       data[i + 1] = std::exp(data[i + 1] - m);
+       float s = data[i] + data[i + 1];
+       data[i] /= s;
+       data[i + 1] /= s;
     }
 }
 
@@ -61,13 +60,14 @@ std::vector<float> transpose4d(
 std::vector<float> sliceAndGetSecondChannel(const std::vector<float>& data) {
     std::vector<float> new_data(data.size() / 2, 0);
     for (size_t i = 0; i < data.size() / 2; i++) {
-      new_data[i] = data[2 * i + 1];
+      new_data[i] = data[i * 2 + 1];
     }
     return new_data;
 }
 
 std::vector<cv::RotatedRect> maskToBoxes(const cv::Mat& mask, float min_area, float min_height, const cv::Size& image_size)
 {
+    std::cout << "+maskToBoxes()";
     std::vector<cv::RotatedRect> bboxes;
     double min_val;
     double max_val;
@@ -76,6 +76,7 @@ std::vector<cv::RotatedRect> maskToBoxes(const cv::Mat& mask, float min_area, fl
     cv::Mat resized_mask;
     cv::resize(mask, resized_mask, image_size, 0, 0, cv::INTER_NEAREST);
 
+    std::cout << max_bbox_idx << std::endl;
     for (int i = 1; i <= max_bbox_idx; i++) {
         cv::Mat bbox_mask = resized_mask == i;
         std::vector<std::vector<cv::Point>> contours;
@@ -90,7 +91,7 @@ std::vector<cv::RotatedRect> maskToBoxes(const cv::Mat& mask, float min_area, fl
             continue;
         bboxes.emplace_back(r);
     }
-
+    std::cout << "...done" << std::endl;
     return bboxes;
 }
 
@@ -158,11 +159,14 @@ cv::Mat get_all(const std::vector<cv::Point>& points, int w, int h, std::unorder
             root_map.emplace(point_root, static_cast<int>(root_map.size() + 1));
         }
         mask.at<int>(point.x + point.y * w) = root_map[point_root];
+        if(root_map[point_root]>50000) {
+            std::cout << root_map[point_root] << std::endl;
+        }
     }
 
     return mask;
 }
-
+    
 cv::Mat decodeImageByJoin(
     const std::vector<float>& cls_data, const std::vector<int>& cls_data_shape,
     const std::vector<float>& link_data, const std::vector<int>& link_data_shape,
@@ -229,21 +233,23 @@ std::vector<cv::RotatedRect> postProcess(
     // PostProcessing for PixelLink Text Detection model
     size_t link_data_size = link_shape[0] * link_shape[1] * link_shape[2] * link_shape[3];
     std::vector<float> link_data(link_data_pointer, link_data_pointer + link_data_size);;
-    softmax(&link_data);
+    softmax(link_data);
     link_data = sliceAndGetSecondChannel(link_data);
     std::vector<int> new_link_data_shape {link_shape[0], link_shape[1], link_shape[2], link_shape[3]/2};
 
     size_t cls_data_size = cls_shape[0] * cls_shape[1] * cls_shape[2] * cls_shape[3];
     std::vector<float> cls_data(cls_data_pointer, cls_data_pointer + cls_data_size);
-    softmax(&cls_data);
+    softmax(cls_data);
     cls_data = sliceAndGetSecondChannel(cls_data);
     std::vector<int> new_cls_data_shape {cls_shape[0], cls_shape[1], cls_shape[2], cls_shape[3]/2};
 
     cv::Mat mask = decodeImageByJoin(
         cls_data, new_cls_data_shape, link_data, new_link_data_shape, cls_conf_threshold, link_conf_threshold);
 
+    std::cout << "+maskToBoxes()";
     rects = maskToBoxes(
         mask, static_cast<float>(kMinArea), static_cast<float>(kMinHeight), image_size);
+    std::cout << "...done" << std::endl;
 
     return rects;
 }

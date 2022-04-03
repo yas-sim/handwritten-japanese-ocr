@@ -1,2 +1,6 @@
 intel
 *.pyc
+*.exp
+*.lib
+*.pyd
+build

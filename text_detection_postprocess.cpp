@@ -35,9 +35,6 @@ static PyObject* postprocess_bridge(PyObject* self, PyObject* args) {
         return nullptr;
     }
 
-    //std::cout << "input size: " << input_w << "," << input_h << std::endl;
-    //std::cout << "threshold: " << link_conf_threshold << "," << cls_conf_threshold << std::endl;
-
     std::vector<int> link_shape;
     size_t l_ndims = PyArray_NDIM(link_logits);                               // Number of dimensions
     npy_intp* l_shape = PyArray_SHAPE(link_logits);                           // Shape
@@ -45,11 +42,6 @@ static PyObject* postprocess_bridge(PyObject* self, PyObject* args) {
         link_shape.push_back(l_shape[i]);
     }
     float *link_data_pointer = static_cast<float*>(PyArray_DATA(link_logits));
-    //std::cout << link_shape[0] << "," << link_shape[1] << "," << link_shape[2] << "," << link_shape[3] << std::endl;
-    //std::cout << "NpyType: " << PyArray_TYPE(link_logits) << std::endl;         // Numpy data type
-    //std::cout << "ItemSize: " << PyArray_ITEMSIZE(link_logits) << std::endl;    // Size of item (element)
-    //std::cout << "TotalSize: " << PyArray_SIZE(link_logits) << std::endl;       // Total size (in size of item)
-    //std::cout << "TotalBytes: " << PyArray_NBYTES(link_logits) << std::endl;    // Total bytes
 
     std::vector<int> cls_shape;
     size_t s_ndims = PyArray_NDIM(segm_logits);                               // Number of dimensions
@@ -58,27 +50,11 @@ static PyObject* postprocess_bridge(PyObject* self, PyObject* args) {
         cls_shape.push_back(s_shape[i]);
     }
     float *cls_data_pointer = static_cast<float*>(PyArray_DATA(segm_logits));
-    //std::cout << cls_shape[0] << "," << cls_shape[1] << "," << cls_shape[2] << "," << cls_shape[3] << std::endl;
-    //std::cout << "NpyType: " << PyArray_TYPE(segm_logits) << std::endl;         // Numpy data type
-    //std::cout << "ItemSize: " << PyArray_ITEMSIZE(segm_logits) << std::endl;    // Size of item (element)
-    //std::cout << "TotalSize: " << PyArray_SIZE(segm_logits) << std::endl;       // Total size (in size of item)
-    //std::cout << "TotalBytes: " << PyArray_NBYTES(segm_logits) << std::endl;    // Total bytes
-
-    //for(int i=0; i<20; i++) {
-    //    std::cout << link_data_pointer[i] << ",";
-    //}
-    //std::cout << std::endl;
-
-    //for(int i=0; i<20; i++) {
-    //    std::cout << cls_data_pointer[i] << ",";
-    //}
-    //std::cout << std::endl;
-
-    //rects = std::vector<cv::RotatedRect (const Point2f &center, const Size2f &size, float angle)>
+    std::cout << "postprocess";
     auto rects = postProcess(link_data_pointer, link_shape, link_conf_threshold,
                              cls_data_pointer,  cls_shape,  cls_conf_threshold, 
                              input_w, input_h);
-
+    std::cout << " - done" << std::endl;
     int out_size = rects.size();
 
     // Create a Numpy object to store result
