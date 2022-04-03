@@ -7,7 +7,7 @@ The demo uses a pre-trained text-detection DL model (`text-detection-0003`) from
 簡単なUIを用意していますのでタッチパネル付きPCがあれば指で字を書いて認識させるデモを行うことが可能です。  
 Intel(r) [Open Model Zoo](https://github.com/opencv/open_model_zoo)の文字検出DLモデル(`text-detection-0003`)で自動領域識別も行ない、DL-OCRモデルで文字認識を行います。  
 
-[NEW 03-Apr-2022] Added C++ postprocess version (handwritten-japanese-ocr-touch-panel-demo-cpp.py).
+[NEW 03-Apr-2022] Added C++ postprocess version. Text detection postprocess performance improved by ~x20. (handwritten-japanese-ocr-touch-panel-demo-cpp.py).
 [NEW 03-Apr-2022] Migrated OpenVINO API to API 2.0 for both native Python version and C++ postprocess version. (OpenVINO 2022.1 support)
 
 ![OCR demo](./resources/ocr-demo.gif)  
