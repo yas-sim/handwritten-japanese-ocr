@@ -31,7 +31,7 @@ from PIL import ImageFont, ImageDraw, Image
 
 from text_detection_postprocess import postprocess
 
-from openvino.preprocess import PrePostProcessor
+from openvino.preprocess import PrePostProcessor, ResizeAlgorithm
 from openvino.runtime import AsyncInferQueue, Core, InferRequest, Layout, Type
 from utils.codec import CTCCodec
 
@@ -243,12 +243,16 @@ def main():
 
     model_root = '.'
 
-    # text-detection-0003  in: (1,3,768,1280)  out: model/link_logits_/add(1,16,192,320) model/segm_logits/add(1,2,192,320)
+    # text-detection-0003  in: (1,768,1280,3)  out: model/link_logits_/add(1,192,320,16) model/segm_logits/add(1,192,320,2)
     model='text-detection-0003'
     model = os.path.join(model_root, 'intel', model, 'FP16', model)
     net_td = ie.read_model(model+'.xml')
     input_blob_td = net_td.inputs[0].get_any_name()
     out_blob_td   = net_td.outputs[0].get_any_name()
+    ppp = PrePostProcessor(net_td)
+    ppp.input().tensor().set_element_type(Type.u8).set_layout(Layout('NHWC'))
+    ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
+    net_td = ppp.build()
     exec_net_td = ie.compile_model(net_td, 'CPU')
 
     # handwritten-japanese-recognition
@@ -283,9 +287,8 @@ def main():
         g_UIState = 1
 
         print('text detection')
-        img = cv2.resize(g_canvas, (_canvas_x, _canvas_y))
-        img = img.reshape((1, _canvas_y, _canvas_x, 3))
-        res_td = exec_net_td.infer_new_request(inputs={input_blob_td: img})
+        tensor = np.expand_dims(g_canvas, 0)
+        res_td = exec_net_td.infer_new_request({0: tensor})
         keys_td = list(res_td.keys())
         link = res_td[keys_td[1]]   # 'model/link_logits_/add'  1,192,320,16
         segm = res_td[keys_td[0]]   # 'model/segm_logits/add'   1,192,320,2
