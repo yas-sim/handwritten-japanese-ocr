@@ -150,7 +150,9 @@ def putJapaneseText(img, x, y, text, size=32):
 
 
 def drawUI(image):
-    cv2.circle(image, (0               , 0), 100, (   0, 255, 255), -1)
+    global g_recogFlag
+    col = (0,255,255) if not g_recogFlag else (0,128,128)
+    cv2.circle(image, (0               , 0), 100, col, -1)
     cv2.circle(image, (image.shape[1]-1, 0), 100, (   0, 255,   0), -1)
     cv2.putText(image, 'RECOGNIZE', (4                 ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 2)
     cv2.putText(image, 'CLEAR'    , (image.shape[1]-60 ,20), cv2.FONT_HERSHEY_PLAIN, 1, (  0,   0,   0), 2)
@@ -270,12 +272,13 @@ def main():
     while True:
         g_UIState = 0
         while g_recogFlag==False:
-            dispCanvas()
             key=cv2.waitKey(100)
+            dispCanvas()
             if key==27:
                 return
             if key==ord(' '):
                 break
+        cv2.waitKey(1)
         g_recogFlag = False
         g_UIState = 1
 
