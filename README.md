@@ -47,12 +47,12 @@ Use `Model Downloader` to download the required models.
 
 ### 3. Build C++ postprocess Python module (Optional)
 Prerequisites: To build the C++ postprocess Python module, you need to install OpenVINO dev package and OpenCV dev package. OpenVINO and OpenCV must be found by cmake. 
-Please refer to the OpenVINO install guide for details.  
+Please refer to the [OpenVINO install guide](https://docs.openvino.ai/latest/openvino_docs_install_guides_overview.html) for details.  
 ```sh
 (Linux)
   source setup_ocv_vars.sh
   ./build.sh
-
+ 
 (Win10)
   setup_ocv_vars.bat
   build.bat
