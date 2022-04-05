@@ -239,30 +239,28 @@ def main():
     global g_clickedFlag
 
     # Plugin initialization
-    ie = Core()
+    core = Core()
 
     model_root = '.'
 
     # text-detection-0003  in: (1,768,1280,3)  out: model/link_logits_/add(1,192,320,16) model/segm_logits/add(1,192,320,2)
     model='text-detection-0003'
     model = os.path.join(model_root, 'intel', model, 'FP16', model)
-    net_td = ie.read_model(model+'.xml')
-    input_blob_td = net_td.inputs[0].get_any_name()
-    out_blob_td   = net_td.outputs[0].get_any_name()
+    net_td = core.read_model(model+'.xml')
     ppp = PrePostProcessor(net_td)
     ppp.input().tensor().set_element_type(Type.u8).set_layout(Layout('NHWC'))
     ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
     net_td = ppp.build()
-    exec_net_td = ie.compile_model(net_td, 'CPU')
+    compiled_model_td = core.compile_model(net_td, 'CPU')
+    ireq_td = compiled_model_td.create_infer_request()
 
     # handwritten-japanese-recognition
     model = 'handwritten-japanese-recognition-0001'
     model = os.path.join(model_root, 'intel', model, 'FP16', model)
-    net = ie.read_model(model+'.xml')
-    input_blob = net.inputs[0].get_any_name()
-    out_blob   = net.outputs[0].get_any_name()
-    input_batch_size, input_channel, input_height, input_width= list(net.inputs[0].get_shape())
-    exec_net = ie.compile_model(net, 'CPU')
+    net = core.read_model(model+'.xml')
+    input_batch_size, input_channel, input_height, input_width = list(net.input(0).get_shape())
+    compiled_model = core.compile_model(net, 'CPU')
+    ireq = compiled_model.create_infer_request()
 
     characters = get_characters('data/kondate_nakayosi_char_list.txt')
     codec = CTCCodec(characters)
@@ -288,10 +286,12 @@ def main():
 
         print('text detection')
         tensor = np.expand_dims(g_canvas, 0)
-        res_td = exec_net_td.infer_new_request({0: tensor})
-        keys_td = list(res_td.keys())
-        link = res_td[keys_td[1]]   # 'model/link_logits_/add'  1,192,320,16
-        segm = res_td[keys_td[0]]   # 'model/segm_logits/add'   1,192,320,2
+        res_td = ireq_td.infer({0: tensor})
+        # To access to the inference result, either one of following way is OK.
+        link = ireq_td.get_tensor('model/link_logits_/add:0').data   # 'model/link_logits_/add'  1,192,320,16
+        segm = ireq_td.get_tensor('model/segm_logits/add:0').data    # 'model/segm_logits/add'   1,192,320,2
+        #link = ireq_td.get_tensor(compiled_model_td.output(1)).data   # 'model/link_logits_/add'  1,192,320,16
+        #segm = ireq_td.get_tensor(compiled_model_td.output(0)).data    # 'model/segm_logits/add'   1,192,320,2
         rects = postprocess(link, segm, _canvas_x, _canvas_y, g_lnk_th/100., g_cls_th/100.)
 
         canvas2 = g_canvas.copy()
@@ -304,9 +304,8 @@ def main():
             crop = cropRotatedImage(g_canvas, box, most_left_idx)
             input_image = preprocess_input(crop, input_height, input_width)[None,:,:,:]
 
-            preds = exec_net.infer_new_request(inputs={input_blob: input_image})
-            key_preds = list(preds.keys())
-            preds = preds[key_preds[0]]
+            res = ireq.infer({0: input_image})
+            preds = ireq.get_tensor(compiled_model.output(0)).data
             result = codec.decode(preds)
             print('OCR result ({}): {}'.format(i, result))
             
